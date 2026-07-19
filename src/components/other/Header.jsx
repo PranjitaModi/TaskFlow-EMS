@@ -4,7 +4,8 @@ const Header = (props) => {
   const username = props.data ? props.data.firstName : 'Director'
 
   const logOutUser = () => {
-    localStorage.setItem('loggedInUser', '')
+    sessionStorage.removeItem('loggedInUser')
+    localStorage.removeItem('loggedInUser')
     props.changeUser('')
   }
 

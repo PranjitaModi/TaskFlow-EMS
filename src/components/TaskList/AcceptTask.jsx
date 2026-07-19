@@ -1,37 +1,40 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState } from 'react'
 import { AuthContext } from '../../context/AuthProvider'
+import { updateTaskStatus } from '../../utils/api'
 
-const AcceptTask = ({ data }) => {
-    const [userData, setUserData] = useContext(AuthContext)
+const AcceptTask = ({ data, employeeEmail }) => {
+    const [userData, setUserData, loadEmployees] = useContext(AuthContext)
+    const [loading, setLoading] = useState(false)
 
-    const updateStatus = (statusType) => {
-        if (!userData) return
-        
-        const updatedData = userData.map(emp => {
-            const taskIndex = emp.tasks.findIndex(t => t.taskTitle === data.taskTitle && t.taskDate === data.taskDate)
-            if (taskIndex !== -1) {
-                emp.tasks[taskIndex].active = false
-                if (statusType === 'completed') {
-                    emp.tasks[taskIndex].completed = true
-                    emp.taskCounts.completed = (emp.taskCounts.completed || 0) + 1
-                } else if (statusType === 'failed') {
-                    emp.tasks[taskIndex].failed = true
-                    emp.taskCounts.failed = (emp.taskCounts.failed || 0) + 1
+    const updateStatus = async (statusType) => {
+        setLoading(true)
+        try {
+            // Find current employee's email if not passed explicitly
+            let emailToUse = employeeEmail
+            if (!emailToUse) {
+                const loggedIn = JSON.parse(sessionStorage.getItem('loggedInUser') || localStorage.getItem('loggedInUser') || '{}')
+                if (loggedIn && loggedIn.data) {
+                    emailToUse = loggedIn.data.email
                 }
-                emp.taskCounts.active = Math.max(0, (emp.taskCounts.active || 0) - 1)
             }
-            return emp
-        })
 
-        setUserData(updatedData)
-        localStorage.setItem('employees', JSON.stringify(updatedData))
+            const res = await updateTaskStatus({
+                employeeEmail: emailToUse,
+                taskTitle: data.taskTitle,
+                taskDate: data.taskDate,
+                action: statusType
+            })
 
-        const loggedIn = JSON.parse(localStorage.getItem('loggedInUser'))
-        if (loggedIn && loggedIn.role === 'employee') {
-            const currentEmp = updatedData.find(e => e.email === loggedIn.data.email)
-            localStorage.setItem('loggedInUser', JSON.stringify({ role: 'employee', data: currentEmp }))
+            if (res.allEmployees) {
+                setUserData(res.allEmployees)
+            } else if (loadEmployees) {
+                await loadEmployees()
+            }
+        } catch (err) {
+            alert(err.message || 'Failed to update task status')
+        } finally {
+            setLoading(false)
         }
-        window.location.reload()
     }
 
     return (
@@ -51,14 +54,16 @@ const AcceptTask = ({ data }) => {
             </div>
             <div className='flex justify-between mt-6 pt-4 border-t border-slate-800/60'>
                 <button 
+                    disabled={loading}
                     onClick={() => updateStatus('completed')} 
-                    className='w-[48%] bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-300 border border-emerald-500/20 rounded-xl py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 outline-none'
+                    className='w-[48%] bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-300 border border-emerald-500/20 rounded-xl py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 outline-none disabled:opacity-50'
                 >
                     Resolve
                 </button>
                 <button 
+                    disabled={loading}
                     onClick={() => updateStatus('failed')} 
-                    className='w-[48%] bg-rose-600/10 hover:bg-rose-600/20 text-rose-300 border border-rose-500/20 rounded-xl py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 outline-none'
+                    className='w-[48%] bg-rose-600/10 hover:bg-rose-600/20 text-rose-300 border border-rose-500/20 rounded-xl py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 outline-none disabled:opacity-50'
                 >
                     Block
                 </button>

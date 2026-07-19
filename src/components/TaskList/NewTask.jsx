@@ -1,32 +1,39 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState } from 'react'
 import { AuthContext } from '../../context/AuthProvider'
+import { updateTaskStatus } from '../../utils/api'
 
-const NewTask = ({ data }) => {
-    const [userData, setUserData] = useContext(AuthContext)
+const NewTask = ({ data, employeeEmail }) => {
+    const [userData, setUserData, loadEmployees] = useContext(AuthContext)
+    const [loading, setLoading] = useState(false)
 
-    const acceptHandler = () => {
-        if (!userData) return
-        
-        const updatedData = userData.map(emp => {
-            const taskIndex = emp.tasks.findIndex(t => t.taskTitle === data.taskTitle && t.taskDate === data.taskDate)
-            if (taskIndex !== -1) {
-                emp.tasks[taskIndex].newTask = false
-                emp.tasks[taskIndex].active = true
-                emp.taskCounts.active = (emp.taskCounts.active || 0) + 1
-                emp.taskCounts.newTask = Math.max(0, (emp.taskCounts.newTask || 0) - 1)
+    const acceptHandler = async () => {
+        setLoading(true)
+        try {
+            let emailToUse = employeeEmail
+            if (!emailToUse) {
+                const loggedIn = JSON.parse(sessionStorage.getItem('loggedInUser') || localStorage.getItem('loggedInUser') || '{}')
+                if (loggedIn && loggedIn.data) {
+                    emailToUse = loggedIn.data.email
+                }
             }
-            return emp
-        })
 
-        setUserData(updatedData)
-        localStorage.setItem('employees', JSON.stringify(updatedData))
+            const res = await updateTaskStatus({
+                employeeEmail: emailToUse,
+                taskTitle: data.taskTitle,
+                taskDate: data.taskDate,
+                action: 'accept'
+            })
 
-        const loggedIn = JSON.parse(localStorage.getItem('loggedInUser'))
-        if (loggedIn && loggedIn.role === 'employee') {
-            const currentEmp = updatedData.find(e => e.email === loggedIn.data.email)
-            localStorage.setItem('loggedInUser', JSON.stringify({ role: 'employee', data: currentEmp }))
+            if (res.allEmployees) {
+                setUserData(res.allEmployees)
+            } else if (loadEmployees) {
+                await loadEmployees()
+            }
+        } catch (err) {
+            alert(err.message || 'Failed to claim task')
+        } finally {
+            setLoading(false)
         }
-        window.location.reload()
     }
 
     return (
@@ -46,10 +53,11 @@ const NewTask = ({ data }) => {
             </div>
             <div className='mt-6 pt-4 border-t border-slate-800/60'>
                 <button 
+                    disabled={loading}
                     onClick={acceptHandler} 
-                    className='w-full bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-300 border border-indigo-500/20 rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 outline-none'
+                    className='w-full bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-300 border border-indigo-500/20 rounded-xl py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 outline-none disabled:opacity-50'
                 >
-                    Claim Sync
+                    {loading ? 'Claiming...' : 'Claim Sync'}
                 </button>
             </div>
         </div>

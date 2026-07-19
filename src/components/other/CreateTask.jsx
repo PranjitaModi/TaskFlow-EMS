@@ -1,57 +1,48 @@
 import React, { useContext, useState } from 'react'
 import { AuthContext } from '../../context/AuthProvider'
+import { createEmployeeTask } from '../../utils/api'
 
 const CreateTask = () => {
 
-    const [userData, setUserData] = useContext(AuthContext)
+    const [userData, setUserData, loadEmployees] = useContext(AuthContext)
 
     const [taskTitle, setTaskTitle] = useState('')
     const [taskDescription, setTaskDescription] = useState('')
     const [taskDate, setTaskDate] = useState('')
     const [asignTo, setAsignTo] = useState('')
     const [category, setCategory] = useState('')
+    const [loading, setLoading] = useState(false)
 
-    const [newTask, setNewTask] = useState({})
-
-    const submitHandler = (e) => {
+    const submitHandler = async (e) => {
         e.preventDefault()
+        setLoading(true)
 
-        const taskItem = { 
-            taskTitle, 
-            taskDescription, 
-            taskDate, 
-            category, 
-            active: false, 
-            newTask: true, 
-            failed: false, 
-            completed: false 
-        }
+        try {
+            const res = await createEmployeeTask({
+                asignTo,
+                taskTitle,
+                taskDescription,
+                taskDate,
+                category
+            })
 
-        const data = [...userData]
-
-        let found = false
-        data.forEach(function (elem) {
-            if (asignTo.trim().toLowerCase() === elem.firstName.trim().toLowerCase()) {
-                elem.tasks.push(taskItem)
-                elem.taskCounts.newTask = (elem.taskCounts.newTask || 0) + 1
-                found = true
+            if (res.allEmployees) {
+                setUserData(res.allEmployees)
+            } else if (loadEmployees) {
+                await loadEmployees()
             }
-        })
 
-        if (!found) {
-            alert(`Teammate "${asignTo}" not found in current registry. Try "Alex" or "Sophia".`)
-            return
+            setTaskTitle('')
+            setCategory('')
+            setAsignTo('')
+            setTaskDate('')
+            setTaskDescription('')
+            alert('Task sync initiated and saved to MongoDB!')
+        } catch (err) {
+            alert(err.message || 'Failed to create task')
+        } finally {
+            setLoading(false)
         }
-
-        setUserData(data)
-        // Persist update back to localStorage
-        localStorage.setItem('employees', JSON.stringify(data))
-
-        setTaskTitle('')
-        setCategory('')
-        setAsignTo('')
-        setTaskDate('')
-        setTaskDescription('')
     }
 
     return (
@@ -131,8 +122,11 @@ const CreateTask = () => {
                             placeholder='Outline objectives, technical constraints, and telemetry validation targets...'
                         ></textarea>
                     </div>
-                    <button className='w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/10 active:scale-[0.99] mt-6 text-sm outline-none'>
-                        Initiate Sync
+                    <button 
+                        disabled={loading}
+                        className='w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/10 active:scale-[0.99] mt-6 text-sm outline-none disabled:opacity-50'
+                    >
+                        {loading ? 'Initiating Sync...' : 'Initiate Sync'}
                     </button>
                 </div>
             </form>
