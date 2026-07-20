@@ -10,7 +10,12 @@ import Admin from './models/Admin.js';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://your-frontend.vercel.app"
+  ]
+}));
 app.use(express.json());
 
 // In-Memory Fallback State (used if MongoDB service is offline)
@@ -224,6 +229,7 @@ app.put('/api/tasks/status', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Express server running on http://localhost:${PORT}`);
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Express server running on port ${PORT}`);
 });
