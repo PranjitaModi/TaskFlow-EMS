@@ -9,7 +9,7 @@ A full-stack **Employee Management System** built using **React.js, Node.js, Exp
 ### 👨‍💼 Admin
 
 - Secure Admin Login
-- View all employeess
+- View all employees
 - Create and assign tasks
 - Monitor employee task status
 - View task statistics
