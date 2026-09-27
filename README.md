@@ -81,7 +81,7 @@ employee-management-system
 
 ## ⚙️ Installation
 
-### Clone the repositoryy
+### Clone the repository
 
 ```bash
 git clone https://github.com/PranjitaModi/employee-management-system.git
